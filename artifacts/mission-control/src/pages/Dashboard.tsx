@@ -195,69 +195,6 @@ const IssMapMarker = () => {
   );
 };
 
-const LiveFeed = () => {
-  return (
-    <Card className="p-0 border-primary/30 bg-card h-full flex flex-col relative overflow-hidden">
-      <div className="absolute top-2 left-2 z-10 flex items-center gap-2 bg-black/70 px-2 py-1 rounded backdrop-blur">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-        </span>
-        <span className="text-xs font-mono text-white uppercase tracking-widest">NASA TV LIVE</span>
-      </div>
-      <div className="flex-1 w-full h-full min-h-[280px] relative flex items-center justify-center"
-        style={{
-          background: 'radial-gradient(ellipse at center, #0a1628 0%, #050c1a 50%, #020810 100%)',
-        }}
-      >
-        {/* Star field effect */}
-        <div className="absolute inset-0 overflow-hidden">
-          {Array.from({ length: 60 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full bg-white"
-              style={{
-                width: Math.random() > 0.8 ? '2px' : '1px',
-                height: Math.random() > 0.8 ? '2px' : '1px',
-                left: `${(i * 17.3) % 100}%`,
-                top: `${(i * 23.7 + 11) % 100}%`,
-                opacity: 0.3 + ((i * 0.13) % 0.7),
-              }}
-            />
-          ))}
-        </div>
-        {/* ISS silhouette */}
-        <div className="relative z-10 flex flex-col items-center gap-6 text-center px-8">
-          <svg width="120" height="60" viewBox="0 0 120 60" fill="none" className="opacity-70">
-            <rect x="40" y="27" width="40" height="6" fill="#00e5ff" opacity="0.8"/>
-            <rect x="52" y="20" width="16" height="20" fill="#00e5ff" opacity="0.6"/>
-            <rect x="0" y="28" width="120" height="4" fill="#00e5ff" opacity="0.4"/>
-            <rect x="8" y="22" width="20" height="16" fill="#00e5ff" opacity="0.3" rx="1"/>
-            <rect x="92" y="22" width="20" height="16" fill="#00e5ff" opacity="0.3" rx="1"/>
-            <circle cx="60" cy="30" r="3" fill="#00e5ff" opacity="0.9"/>
-          </svg>
-          <div className="space-y-2">
-            <p className="text-primary font-mono text-sm uppercase tracking-widest">International Space Station</p>
-            <p className="text-white/60 text-xs font-mono">Altitude: 408 km · Orbital Period: 92.68 min</p>
-          </div>
-          <a
-            href="https://www.youtube.com/watch?v=jXNSIpjTYMI"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-red-600/20 border border-red-500/40 text-red-400 font-mono text-xs uppercase tracking-widest rounded hover:bg-red-600/30 hover:border-red-400/60 transition-colors"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-            </span>
-            Watch NASA TV Live
-          </a>
-        </div>
-        <div className="absolute inset-0 border border-primary/10 pointer-events-none"></div>
-      </div>
-    </Card>
-  );
-};
 
 const AIMentorSidebar = () => {
   const { data: convos } = useListConversations();
@@ -395,7 +332,7 @@ export default function Dashboard() {
         
         {/* Center Column */}
         <div className="col-span-6 flex flex-col gap-4">
-          <div className="h-64 relative rounded border border-primary/30 overflow-hidden shadow-[0_0_30px_rgba(0,229,255,0.05)] bg-card">
+          <div className="flex-1 relative rounded border border-primary/30 overflow-hidden shadow-[0_0_30px_rgba(0,229,255,0.05)] bg-card">
              <div className="absolute top-2 left-2 z-10">
                 <span className="text-xs font-mono text-primary uppercase tracking-widest bg-black/60 px-2 py-1 rounded backdrop-blur">ORBITAL TRACKER</span>
              </div>
@@ -418,9 +355,6 @@ export default function Dashboard() {
                 {/* ISS Location */}
                 <IssMapMarker />
              </div>
-          </div>
-          <div className="flex-1 min-h-0 relative rounded border border-primary/30 overflow-hidden shadow-[0_0_30px_rgba(0,229,255,0.05)]">
-            <LiveFeed />
           </div>
         </div>
 
