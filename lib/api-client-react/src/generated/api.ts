@@ -26,6 +26,7 @@ import type {
   IssPassesResponse,
   IssPosition,
   IssSummary,
+  IssTle,
   SendMessageBody,
 } from "./api.schemas";
 
@@ -405,6 +406,71 @@ export function useGetIssSummary<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetIssSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get current ISS TLE orbital elements for client-side computation
+ */
+export const getGetIssTleUrl = () => {
+  return `/api/iss/tle`;
+};
+
+export const getIssTle = async (options?: RequestInit): Promise<IssTle> => {
+  return customFetch<IssTle>(getGetIssTleUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetIssTleQueryKey = () => {
+  return [`/api/iss/tle`] as const;
+};
+
+export const getGetIssTleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getIssTle>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getIssTle>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetIssTleQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getIssTle>>> = ({
+    signal,
+  }) => getIssTle({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getIssTle>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetIssTleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getIssTle>>
+>;
+export type GetIssTleQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current ISS TLE orbital elements for client-side computation
+ */
+
+export function useGetIssTle<
+  TData = Awaited<ReturnType<typeof getIssTle>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getIssTle>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIssTleQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

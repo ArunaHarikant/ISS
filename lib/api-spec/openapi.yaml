@@ -80,6 +80,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/IssSummary"
 
+  /iss/tle:
+    get:
+      operationId: getIssTle
+      tags: [iss]
+      summary: Get current ISS TLE orbital elements for client-side computation
+      responses:
+        "200":
+          description: ISS TLE data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssTle"
+
   /openai/conversations:
     get:
       operationId: listConversations
@@ -194,6 +207,23 @@ components:
         - velocity
         - timestamp
         - visibility
+
+    IssTle:
+      type: object
+      properties:
+        name:
+          type: string
+        tle1:
+          type: string
+        tle2:
+          type: string
+        fetchedAt:
+          type: number
+      required:
+        - name
+        - tle1
+        - tle2
+        - fetchedAt
 
     IssPass:
       type: object

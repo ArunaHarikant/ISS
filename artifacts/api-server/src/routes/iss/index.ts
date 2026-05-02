@@ -4,6 +4,7 @@ import {
   GetIssPassesResponse,
   GetIssCrewResponse,
   GetIssSummaryResponse,
+  GetIssTleResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -13,7 +14,7 @@ const ISU_LON = 7.7386;
 const ISS_NORAD_ID = 25544;
 
 const ISS_TLE_URL =
-  "https://celestrak.org/SATCAT/elements.php?CATNR=25544&FORMAT=TLE";
+  "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE";
 const WHERETHEISS_URL = "https://api.wheretheiss.at/v1/satellites/25544";
 const OPEN_NOTIFY_CREW_URL = "http://api.open-notify.org/astros.json";
 
@@ -29,7 +30,7 @@ async function fetchTLE(): Promise<{ tle1: string; tle2: string }> {
 
   try {
     const res = await fetch(
-      "https://celestrak.org/SATCAT/elements.php?CATNR=25544&FORMAT=TLE"
+      "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE"
     );
     const text = await res.text();
     const lines = text
@@ -45,9 +46,9 @@ async function fetchTLE(): Promise<{ tle1: string; tle2: string }> {
   } catch {}
 
   const tle1 =
-    "1 25544U 98067A   25120.50000000  .00002182  00000-0  40768-4 0  9990";
+    "1 25544U 98067A   26122.39338617  .00006924  00000+0  13339-3 0  9995";
   const tle2 =
-    "2 25544  51.6461 339.7939 0003992  84.2016 275.9561 15.49961420507523";
+    "2 25544  51.6309 166.7723 0007240  14.7888 345.3311 15.49060784564657";
   return { tle1, tle2 };
 }
 
@@ -179,6 +180,23 @@ async function getIssCrew() {
     };
   }
 }
+
+router.get("/iss/tle", async (req, res): Promise<void> => {
+  try {
+    const { tle1, tle2 } = await fetchTLE();
+    res.json(
+      GetIssTleResponse.parse({
+        name: "ISS (ZARYA)",
+        tle1,
+        tle2,
+        fetchedAt: tleCache?.fetchedAt ?? Date.now(),
+      })
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch ISS TLE");
+    res.status(500).json({ error: "Failed to fetch TLE" });
+  }
+});
 
 router.get("/iss/position", async (req, res): Promise<void> => {
   try {

@@ -82,6 +82,16 @@ export const GetIssSummaryResponse = zod.object({
 });
 
 /**
+ * @summary Get current ISS TLE orbital elements for client-side computation
+ */
+export const GetIssTleResponse = zod.object({
+  name: zod.string(),
+  tle1: zod.string(),
+  tle2: zod.string(),
+  fetchedAt: zod.number(),
+});
+
+/**
  * @summary List all AI mentor conversations
  */
 export const ListConversationsResponseItem = zod.object({

@@ -18,6 +18,13 @@ export interface IssPosition {
   visibility: string;
 }
 
+export interface IssTle {
+  name: string;
+  tle1: string;
+  tle2: string;
+  fetchedAt: number;
+}
+
 export interface IssPass {
   risetime: number;
   duration: number;
