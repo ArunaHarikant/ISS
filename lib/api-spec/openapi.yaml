@@ -45,7 +45,26 @@ paths:
     get:
       operationId: getIssPasses
       tags: [iss]
-      summary: Get upcoming ISS passes over ISU campus in Strasbourg
+      summary: Get upcoming ISS passes over a given location (defaults to ISU Strasbourg)
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Observer latitude in decimal degrees (-90 to 90)
+        - name: lon
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Observer longitude in decimal degrees (-180 to 180)
+        - name: locationName
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Human-readable name for the observer location
       responses:
         "200":
           description: Upcoming passes

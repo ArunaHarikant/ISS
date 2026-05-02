@@ -94,3 +94,18 @@ export interface SendMessageBody {
 export interface ErrorResponse {
   error: string;
 }
+
+export type GetIssPassesParams = {
+  /**
+   * Observer latitude in decimal degrees (-90 to 90)
+   */
+  lat?: number;
+  /**
+   * Observer longitude in decimal degrees (-180 to 180)
+   */
+  lon?: number;
+  /**
+   * Human-readable name for the observer location
+   */
+  locationName?: string;
+};

@@ -27,8 +27,23 @@ export const GetIssPositionResponse = zod.object({
 });
 
 /**
- * @summary Get upcoming ISS passes over ISU campus in Strasbourg
+ * @summary Get upcoming ISS passes over a given location (defaults to ISU Strasbourg)
  */
+export const GetIssPassesQueryParams = zod.object({
+  lat: zod.coerce
+    .number()
+    .optional()
+    .describe("Observer latitude in decimal degrees (-90 to 90)"),
+  lon: zod.coerce
+    .number()
+    .optional()
+    .describe("Observer longitude in decimal degrees (-180 to 180)"),
+  locationName: zod.coerce
+    .string()
+    .optional()
+    .describe("Human-readable name for the observer location"),
+});
+
 export const GetIssPassesResponse = zod.object({
   passes: zod.array(
     zod.object({

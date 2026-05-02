@@ -15,6 +15,154 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import logoUrl from "@assets/International_Space_University_1777725450504.png";
 
+// ─── User location ────────────────────────────────────────────────────────────
+type UserLocation = { lat: number; lon: number; name: string };
+const ISU_DEFAULT: UserLocation = { lat: 48.5231, lon: 7.7386, name: "ISU Strasbourg" };
+
+const LOCATION_KEY = "isu-mc-observer-location";
+
+function loadLocation(): UserLocation {
+  try {
+    const raw = localStorage.getItem(LOCATION_KEY);
+    if (raw) return JSON.parse(raw) as UserLocation;
+  } catch {}
+  return ISU_DEFAULT;
+}
+
+// ─── Location Panel ───────────────────────────────────────────────────────────
+const LocationPanel = ({
+  location,
+  onChange,
+}: {
+  location: UserLocation;
+  onChange: (loc: UserLocation) => void;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const [draft, setDraft] = useState({ lat: String(location.lat), lon: String(location.lon), name: location.name });
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const useGeo = () => {
+    if (!navigator.geolocation) { setGeoError("Geolocation not supported"); return; }
+    setGeoLoading(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setGeoLoading(false);
+        const loc: UserLocation = {
+          lat: Math.round(pos.coords.latitude * 10000) / 10000,
+          lon: Math.round(pos.coords.longitude * 10000) / 10000,
+          name: "My Location",
+        };
+        localStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
+        onChange(loc);
+        setDraft({ lat: String(loc.lat), lon: String(loc.lon), name: loc.name });
+        setExpanded(false);
+      },
+      err => { setGeoLoading(false); setGeoError(err.message); }
+    );
+  };
+
+  const save = () => {
+    const lat = parseFloat(draft.lat);
+    const lon = parseFloat(draft.lon);
+    if (!isFinite(lat) || lat < -90 || lat > 90) { setGeoError("Latitude must be −90 to 90"); return; }
+    if (!isFinite(lon) || lon < -180 || lon > 180) { setGeoError("Longitude must be −180 to 180"); return; }
+    const loc: UserLocation = { lat, lon, name: draft.name.trim() || `${lat}°, ${lon}°` };
+    localStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
+    onChange(loc);
+    setGeoError(null);
+    setExpanded(false);
+  };
+
+  const reset = () => {
+    localStorage.removeItem(LOCATION_KEY);
+    onChange(ISU_DEFAULT);
+    setDraft({ lat: String(ISU_DEFAULT.lat), lon: String(ISU_DEFAULT.lon), name: ISU_DEFAULT.name });
+    setGeoError(null);
+    setExpanded(false);
+  };
+
+  return (
+    <Card className="p-4 border-primary/20 bg-card flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-bold text-primary/70 uppercase tracking-widest">Observer Location</h2>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="text-[10px] font-mono text-primary/50 hover:text-primary uppercase tracking-wider transition-colors"
+        >
+          {expanded ? "▲ Close" : "▼ Edit"}
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2 w-2 flex-shrink-0">
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-white truncate">{location.name}</p>
+          <p className="text-[10px] font-mono text-muted-foreground tabular-nums">
+            {location.lat.toFixed(4)}°{location.lat >= 0 ? "N" : "S"} &nbsp;
+            {Math.abs(location.lon).toFixed(4)}°{location.lon >= 0 ? "E" : "W"}
+          </p>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="flex flex-col gap-2 pt-1 border-t border-primary/10">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={geoLoading}
+            onClick={useGeo}
+            className="h-7 text-xs border-primary/30 text-primary hover:bg-primary hover:text-black w-full"
+          >
+            {geoLoading ? "Locating…" : "⊕ Use My Location"}
+          </Button>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Input
+              value={draft.lat}
+              onChange={e => setDraft(d => ({ ...d, lat: e.target.value }))}
+              placeholder="Lat (−90→90)"
+              className="h-7 text-xs bg-black/50 border-primary/20 text-white font-mono"
+            />
+            <Input
+              value={draft.lon}
+              onChange={e => setDraft(d => ({ ...d, lon: e.target.value }))}
+              placeholder="Lon (−180→180)"
+              className="h-7 text-xs bg-black/50 border-primary/20 text-white font-mono"
+            />
+          </div>
+          <Input
+            value={draft.name}
+            onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+            placeholder="Location name"
+            className="h-7 text-xs bg-black/50 border-primary/20 text-white"
+          />
+          {geoError && <p className="text-[10px] text-red-400 font-mono">{geoError}</p>}
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              onClick={save}
+              className="flex-1 h-7 text-xs bg-primary text-black hover:bg-primary/80 font-mono uppercase tracking-wider"
+            >
+              Save
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={reset}
+              className="h-7 text-xs border-primary/20 text-muted-foreground hover:text-white"
+            >
+              Reset
+            </Button>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+};
+
 // ─── Clock ────────────────────────────────────────────────────────────────────
 const Clock = () => {
   const [time, setTime] = useState(new Date());
@@ -83,8 +231,11 @@ const TelemetryPanel = ({ lat, lon, alt, vel, vis }: {
 );
 
 // ─── Pass Countdown ───────────────────────────────────────────────────────────
-const PassCountdown = () => {
-  const { data: passesData } = useGetIssPasses({ query: { refetchInterval: 300_000 } });
+const PassCountdown = ({ location }: { location: UserLocation }) => {
+  const { data: passesData } = useGetIssPasses(
+    { lat: location.lat, lon: location.lon, locationName: location.name },
+    { query: { refetchInterval: 300_000 } }
+  );
   const nextPass = passesData?.passes?.[0];
   const [countdown, setCountdown] = useState(0);
 
@@ -105,9 +256,12 @@ const PassCountdown = () => {
 
   return (
     <Card className="p-4 border-accent/30 shadow-[0_0_20px_rgba(255,170,0,0.05)] bg-card flex flex-col gap-4">
-      <h2 className="text-lg font-bold text-accent/80 uppercase tracking-widest border-b border-accent/20 pb-2">
-        Next International Space University (ISU) Overhead Pass
-      </h2>
+      <div className="border-b border-accent/20 pb-2">
+        <h2 className="text-sm font-bold text-accent/80 uppercase tracking-widest leading-tight">
+          Next Overhead Pass
+        </h2>
+        <p className="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">{location.name}</p>
+      </div>
       <div className="flex flex-col items-center py-4">
         <span className="text-4xl font-mono text-accent drop-shadow-[0_0_10px_rgba(255,170,0,0.8)]">
           {nextPass ? fmt(countdown) : "T-00:00:00"}
@@ -248,7 +402,7 @@ const splitAtAntimeridian = (pts: GeoPoint[]): GeoPoint[][] => {
   return segs;
 };
 
-const OrbitalTracker = () => {
+const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
   const { data: tleData } = useGetIssTle({
     query: { refetchInterval: 3_600_000, staleTime: 3_600_000 },
   });
@@ -312,7 +466,7 @@ const OrbitalTracker = () => {
       .join(" ");
 
   const iss = toSVG(issPos.lat, issPos.lon);
-  const isu = toSVG(48.5231, 7.7386);
+  const obs = toSVG(userLocation.lat, userLocation.lon);
   const issValid = isFinite(iss.x) && isFinite(iss.y);
 
   return (
@@ -370,13 +524,16 @@ const OrbitalTracker = () => {
           />
         ))}
 
-        {/* ISU campus */}
-        <circle cx={isu.x} cy={isu.y} r="0.7" fill="#ffaa00" opacity="0.9" />
-        <circle cx={isu.x} cy={isu.y} r="1.4" fill="none" stroke="#ffaa00" strokeWidth="0.2" opacity="0.5">
+        {/* Observer location */}
+        <circle cx={obs.x} cy={obs.y} r="0.7" fill="#ffaa00" opacity="0.9" />
+        <circle cx={obs.x} cy={obs.y} r="1.4" fill="none" stroke="#ffaa00" strokeWidth="0.2" opacity="0.5">
           <animate attributeName="r" values="0.7;2;0.7" dur="2.5s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.6;0;0.6" dur="2.5s" repeatCount="indefinite" />
         </circle>
-        <text x={isu.x + 0.9} y={isu.y + 0.5} fontSize="1.5" fill="#ffaa00" fontFamily="monospace" fontWeight="bold">ISU</text>
+        <text x={obs.x + 0.9} y={obs.y + 0.5} fontSize="1.5" fill="#ffaa00" fontFamily="monospace" fontWeight="bold"
+          style={{ userSelect: "none" }}>
+          {userLocation.name.length > 12 ? userLocation.name.slice(0, 11) + "…" : userLocation.name}
+        </text>
 
         {/* ISS position — only render once satellite.js gives a valid fix */}
         {issValid && (
@@ -608,14 +765,11 @@ const AIMentorSidebar = () => {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  // Pull live position from satellite.js at 4Hz — share with TelemetryPanel
-  const { data: tleData } = useGetIssTle({
-    query: { refetchInterval: 3_600_000, staleTime: 3_600_000 },
-  });
-  const { data: summaryData } = useGetIssSummary({ query: { refetchInterval: 10_000 } });
+  const [location, setLocation] = useState<UserLocation>(loadLocation);
 
-  // Keep a live lat/lon/alt/vel/vis from the summary (refreshed every 10s)
-  // The OrbitalTracker computes smooth position independently via satellite.js
+  const handleLocationChange = (loc: UserLocation) => setLocation(loc);
+
+  const { data: summaryData } = useGetIssSummary({ query: { refetchInterval: 10_000 } });
   const pos = summaryData?.position;
 
   return (
@@ -632,14 +786,15 @@ export default function Dashboard() {
             vel={pos?.velocity ?? null}
             vis={pos?.visibility ?? ""}
           />
-          <PassCountdown />
+          <LocationPanel location={location} onChange={handleLocationChange} />
+          <PassCountdown location={location} />
           <CommanderPanel />
         </div>
 
         {/* Center column: orbital tracker (top) + live Earth view (bottom) */}
         <div className="col-span-6 flex flex-col gap-4 min-h-0 h-full">
           <div className="min-h-0 flex-1 relative rounded border border-primary/30 overflow-hidden shadow-[0_0_30px_rgba(0,229,255,0.08)]">
-            <OrbitalTracker />
+            <OrbitalTracker userLocation={location} />
           </div>
           <div className="flex-shrink-0 h-[200px] rounded border border-emerald-500/20 overflow-hidden shadow-[0_0_20px_rgba(52,211,153,0.05)]">
             <SubOrbitalView lat={pos?.latitude ?? null} lon={pos?.longitude ?? null} />

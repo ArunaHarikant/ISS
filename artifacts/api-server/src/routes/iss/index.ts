@@ -73,7 +73,11 @@ async function getIssPosition() {
   };
 }
 
-async function getIssPasses() {
+async function getIssPasses(opts?: { lat: number; lon: number; name: string }) {
+  const obsLat = opts?.lat ?? ISU_LAT;
+  const obsLon = opts?.lon ?? ISU_LON;
+  const obsName = opts?.name ?? "ISU Strasbourg";
+
   try {
     const { tle1, tle2 } = await fetchTLE();
     const satellite = await import("satellite.js");
@@ -83,9 +87,9 @@ async function getIssPasses() {
     const passes: { risetime: number; duration: number; maxElevation: number }[] = [];
 
     const observerGd = {
-      longitude: satellite.degreesToRadians(ISU_LON),
-      latitude: satellite.degreesToRadians(ISU_LAT),
-      height: 0.142,
+      longitude: satellite.degreesToRadians(obsLon),
+      latitude: satellite.degreesToRadians(obsLat),
+      height: 0.1,
     };
 
     const STEP_MS = 30000;
@@ -143,7 +147,7 @@ async function getIssPasses() {
 
     return {
       passes,
-      location: { latitude: ISU_LAT, longitude: ISU_LON, name: "ISU Strasbourg" },
+      location: { latitude: obsLat, longitude: obsLon, name: obsName },
     };
   } catch (err) {
     const now = Math.floor(Date.now() / 1000);
@@ -153,7 +157,7 @@ async function getIssPasses() {
         { risetime: now + 5400, duration: 240, maxElevation: 28 },
         { risetime: now + 9000, duration: 480, maxElevation: 67 },
       ],
-      location: { latitude: ISU_LAT, longitude: ISU_LON, name: "ISU Strasbourg" },
+      location: { latitude: obsLat, longitude: obsLon, name: obsName },
     };
   }
 }
@@ -210,7 +214,16 @@ router.get("/iss/position", async (req, res): Promise<void> => {
 
 router.get("/iss/passes", async (req, res): Promise<void> => {
   try {
-    const passes = await getIssPasses();
+    const lat = req.query.lat !== undefined ? parseFloat(req.query.lat as string) : undefined;
+    const lon = req.query.lon !== undefined ? parseFloat(req.query.lon as string) : undefined;
+    const locationName = (req.query.locationName as string | undefined) ?? undefined;
+
+    const opts =
+      lat !== undefined && lon !== undefined && isFinite(lat) && isFinite(lon)
+        ? { lat, lon, name: locationName ?? `${lat.toFixed(4)}°, ${lon.toFixed(4)}°` }
+        : undefined;
+
+    const passes = await getIssPasses(opts);
     res.json(GetIssPassesResponse.parse(passes));
   } catch (err) {
     req.log.error({ err }, "Failed to calculate ISS passes");

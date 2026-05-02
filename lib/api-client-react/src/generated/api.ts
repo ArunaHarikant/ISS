@@ -21,6 +21,7 @@ import type {
   ConversationWithMessages,
   CreateConversationBody,
   ErrorResponse,
+  GetIssPassesParams,
   HealthStatus,
   IssCrewResponse,
   IssPassesResponse,
@@ -190,43 +191,59 @@ export function useGetIssPosition<
 }
 
 /**
- * @summary Get upcoming ISS passes over ISU campus in Strasbourg
+ * @summary Get upcoming ISS passes over a given location (defaults to ISU Strasbourg)
  */
-export const getGetIssPassesUrl = () => {
-  return `/api/iss/passes`;
+export const getGetIssPassesUrl = (params?: GetIssPassesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/iss/passes?${stringifiedParams}`
+    : `/api/iss/passes`;
 };
 
 export const getIssPasses = async (
+  params?: GetIssPassesParams,
   options?: RequestInit,
 ): Promise<IssPassesResponse> => {
-  return customFetch<IssPassesResponse>(getGetIssPassesUrl(), {
+  return customFetch<IssPassesResponse>(getGetIssPassesUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetIssPassesQueryKey = () => {
-  return [`/api/iss/passes`] as const;
+export const getGetIssPassesQueryKey = (params?: GetIssPassesParams) => {
+  return [`/api/iss/passes`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetIssPassesQueryOptions = <
   TData = Awaited<ReturnType<typeof getIssPasses>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getIssPasses>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetIssPassesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getIssPasses>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetIssPassesQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetIssPassesQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getIssPasses>>> = ({
     signal,
-  }) => getIssPasses({ signal, ...requestOptions });
+  }) => getIssPasses(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getIssPasses>>,
@@ -241,21 +258,24 @@ export type GetIssPassesQueryResult = NonNullable<
 export type GetIssPassesQueryError = ErrorType<unknown>;
 
 /**
- * @summary Get upcoming ISS passes over ISU campus in Strasbourg
+ * @summary Get upcoming ISS passes over a given location (defaults to ISU Strasbourg)
  */
 
 export function useGetIssPasses<
   TData = Awaited<ReturnType<typeof getIssPasses>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getIssPasses>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetIssPassesQueryOptions(options);
+>(
+  params?: GetIssPassesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getIssPasses>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIssPassesQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
