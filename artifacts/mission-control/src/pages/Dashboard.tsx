@@ -127,26 +127,52 @@ const PassCountdown = () => {
   );
 };
 
+// ─── Crew-12 roster (hardcoded) ───────────────────────────────────────────────
+const CREW_12 = [
+  {
+    initials: "JH",
+    name: "Jack Hathaway",
+    agency: "NASA",
+    role: "Mission Commander / Pilot",
+    detail: "First spaceflight",
+    isuConnection: false,
+    color: "text-primary border-primary bg-primary/20",
+    badgeColor: "text-primary",
+  },
+  {
+    initials: "SA",
+    name: "Sophie Adenot",
+    agency: "ESA",
+    role: "Mission Specialist · εpsilon",
+    detail: "ISAE-SUPAERO · First spaceflight",
+    isuConnection: true,
+    color: "text-amber-400 border-amber-400 bg-amber-400/10",
+    badgeColor: "text-amber-400",
+  },
+  {
+    initials: "AF",
+    name: "Andrey Fedyaev",
+    agency: "Roscosmos",
+    role: "Mission Specialist",
+    detail: "Second long-duration mission",
+    isuConnection: false,
+    color: "text-rose-400 border-rose-400 bg-rose-400/10",
+    badgeColor: "text-rose-400",
+  },
+];
+
 // ─── Commander Panel ──────────────────────────────────────────────────────────
 const CommanderPanel = () => {
-  const { data: crewData } = useGetIssCrew({ query: { refetchInterval: 60_000 } });
   const { data: summary } = useGetIssSummary({ query: { refetchInterval: 10_000 } });
 
   return (
     <Card className="p-4 border-primary/30 bg-card flex flex-col gap-4">
       <h2 className="text-lg font-bold text-primary/80 uppercase tracking-widest border-b border-primary/20 pb-2">
-        Crew Manifest
+        Crew-12 Manifest
       </h2>
-      <div className="flex items-center gap-4 p-3 bg-primary/5 border border-primary/20 rounded">
-        <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xl border border-primary">
-          JM
-        </div>
-        <div>
-          <h3 className="text-white font-bold text-lg">Jessica Meir</h3>
-          <p className="text-sm text-primary uppercase font-mono tracking-widest">Commander</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
+
+      {/* Stats row */}
+      <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col p-2 bg-black/40 rounded border border-white/5">
           <span className="text-xs text-muted-foreground uppercase">Mission Day</span>
           <span className="font-mono text-white">{summary?.missionDay ?? "—"}</span>
@@ -156,20 +182,40 @@ const CommanderPanel = () => {
           <span className="font-mono text-white">{summary?.orbitsCompleted ?? "—"}</span>
         </div>
       </div>
-      <div>
-        <h4 className="text-xs text-muted-foreground uppercase mb-2">
-          Total Crew ({crewData?.number ?? 0})
-        </h4>
-        <ScrollArea className="h-24">
-          <div className="space-y-1">
-            {crewData?.people.map((p, i) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span className="text-white">{p.name}</span>
-                <span className="text-primary font-mono text-xs">{p.craft}</span>
+
+      {/* Crew cards */}
+      <div className="flex flex-col gap-2">
+        {CREW_12.map((member) => (
+          <div
+            key={member.name}
+            className={`flex items-start gap-3 p-3 rounded border ${
+              member.isuConnection
+                ? "border-amber-400/30 bg-amber-400/5"
+                : "border-white/5 bg-black/30"
+            }`}
+          >
+            <div
+              className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm border ${member.color}`}
+            >
+              {member.initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-white font-semibold text-sm leading-tight">{member.name}</span>
+                <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5 ${member.badgeColor}`}>
+                  {member.agency}
+                </span>
+                {member.isuConnection && (
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    ISU ★
+                  </span>
+                )}
               </div>
-            ))}
+              <p className="text-xs text-primary/70 font-mono mt-0.5">{member.role}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{member.detail}</p>
+            </div>
           </div>
-        </ScrollArea>
+        ))}
       </div>
     </Card>
   );
