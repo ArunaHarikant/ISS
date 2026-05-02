@@ -7,7 +7,9 @@ import {
   useCreateConversation,
   useGetConversation,
   useGetIssTle,
+  useGetIssTraffic,
 } from "@workspace/api-client-react";
+import type { IssTrafficResponse } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logoUrl from "@assets/International_Space_University_1777725450504.png";
@@ -589,12 +591,42 @@ const splitAtAntimeridian = (pts: GeoPoint[]): GeoPoint[][] => {
   return segs;
 };
 
-const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
+// Color per satellite category
+const TRAFFIC_COLORS: Record<string, string> = {
+  starlink: "#60a5fa",
+  oneweb:   "#c084fc",
+  debris:   "#f87171",
+  other:    "#94a3b8",
+};
+
+interface TrafficDot {
+  name: string;
+  lat: number;
+  lon: number;
+  distKm: number;
+  category: string;
+  isConjunction: boolean;
+}
+
+const OrbitalTracker = ({
+  userLocation,
+  trafficEnabled,
+  trafficData,
+}: {
+  userLocation: UserLocation;
+  trafficEnabled: boolean;
+  trafficData: IssTrafficResponse | undefined;
+}) => {
   const { data: tleData } = useGetIssTle({ query: { refetchInterval: 3_600_000, staleTime: 3_600_000 } });
   const [issPos, setIssPos] = useState({ lat: 0, lon: 0 });
+  const [issEci, setIssEci] = useState<{ x: number; y: number; z: number } | null>(null);
   const [groundTrack, setGroundTrack] = useState<GeoPoint[]>([]);
+  const [trafficDots, setTrafficDots] = useState<TrafficDot[]>([]);
   const satrec = useRef<satelliteJs.SatRec | null>(null);
+  // Pre-built satrecs for traffic satellites (rebuilt when trafficData changes)
+  const trafficSatrecs = useRef<{ name: string; rec: satelliteJs.SatRec; category: string; isConjunction: boolean }[]>([]);
 
+  // Build ISS satrec + ground track
   useEffect(() => {
     if (!tleData) return;
     const rec = satelliteJs.twoline2satrec(tleData.tle1, tleData.tle2);
@@ -613,6 +645,7 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
     setGroundTrack(track);
   }, [tleData]);
 
+  // ISS 4 Hz position update
   useEffect(() => {
     if (!tleData) return;
     const update = () => {
@@ -623,6 +656,7 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
         const gmst = satelliteJs.gstime(now);
         const geo = satelliteJs.eciToGeodetic(pv.position, gmst);
         setIssPos({ lat: satelliteJs.radiansToDegrees(geo.latitude), lon: satelliteJs.radiansToDegrees(geo.longitude) });
+        setIssEci({ x: pv.position.x, y: pv.position.y, z: pv.position.z });
       }
     };
     update();
@@ -630,7 +664,65 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
     return () => clearInterval(id);
   }, [tleData]);
 
-  const pastSegs  = splitAtAntimeridian(groundTrack.filter(p => !p.future));
+  // Build traffic satrecs when data arrives
+  useEffect(() => {
+    if (!trafficData) { trafficSatrecs.current = []; return; }
+    const conjunctionNames = new Set(trafficData.conjunctions.map(c => c.name));
+    const built: typeof trafficSatrecs.current = [];
+    // Regular traffic satellites
+    for (const s of trafficData.satellites) {
+      try {
+        built.push({ name: s.name, rec: satelliteJs.twoline2satrec(s.tle1, s.tle2), category: s.category, isConjunction: false });
+      } catch {}
+    }
+    // Conjunction objects (add/override)
+    for (const c of trafficData.conjunctions) {
+      try {
+        built.push({ name: c.name, rec: satelliteJs.twoline2satrec(c.tle1, c.tle2), category: "debris", isConjunction: true });
+        conjunctionNames.delete(c.name);
+      } catch {}
+    }
+    trafficSatrecs.current = built;
+  }, [trafficData]);
+
+  // Traffic position update at 1 Hz (lower rate to save CPU with 150+ satellites)
+  useEffect(() => {
+    if (!trafficEnabled) { setTrafficDots([]); return; }
+    const update = () => {
+      if (!issEci || trafficSatrecs.current.length === 0) return;
+      const now = new Date();
+      const dots: TrafficDot[] = [];
+      for (const { name, rec, category, isConjunction } of trafficSatrecs.current) {
+        try {
+          const pv = satelliteJs.propagate(rec, now);
+          if (!pv.position || typeof pv.position === "boolean") continue;
+          // 3D ECI distance to ISS
+          const dx = pv.position.x - issEci.x;
+          const dy = pv.position.y - issEci.y;
+          const dz = pv.position.z - issEci.z;
+          const distKm = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          // Only show if within ~3000 km to keep the map meaningful
+          if (distKm > 3000 && !isConjunction) continue;
+          const gmst = satelliteJs.gstime(now);
+          const geo = satelliteJs.eciToGeodetic(pv.position, gmst);
+          dots.push({
+            name,
+            lat: satelliteJs.radiansToDegrees(geo.latitude),
+            lon: satelliteJs.radiansToDegrees(geo.longitude),
+            distKm,
+            category,
+            isConjunction,
+          });
+        } catch {}
+      }
+      setTrafficDots(dots);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [trafficEnabled, issEci, trafficData]);
+
+  const pastSegs   = splitAtAntimeridian(groundTrack.filter(p => !p.future));
   const futureSegs = splitAtAntimeridian(groundTrack.filter(p => p.future));
   const pts = (seg: GeoPoint[]) =>
     seg.map(p => { const { x, y } = toSVG(p.lat, p.lon); return `${x.toFixed(3)},${y.toFixed(3)}`; })
@@ -640,6 +732,13 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
   const obs = toSVG(userLocation.lat, userLocation.lon);
   const issValid = isFinite(iss.x) && isFinite(iss.y);
 
+  // Proximity / conjunction risk summary
+  const closeObjects = trafficDots.filter(d => d.distKm < 200);
+  const conjunctionObjects = trafficDots.filter(d => d.isConjunction);
+  const nearestKm = closeObjects.length > 0 ? Math.min(...closeObjects.map(d => d.distKm)) : null;
+  const hasConjunction = conjunctionObjects.length > 0;
+  const nextTca = trafficData?.conjunctions[0];
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#060a12]">
       <img
@@ -648,6 +747,7 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
         draggable={false}
       />
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
+        {/* Grid */}
         {[-60,-30,0,30,60].map(lat => {
           const y = (90-lat)/180*50;
           return <line key={`lat${lat}`} x1="0" y1={y} x2="100" y2={y} stroke="#009fda14" strokeWidth="0.08" />;
@@ -656,6 +756,28 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
           const x = (lon+180)/360*100;
           return <line key={`lon${lon}`} x1={x} y1="0" x2={x} y2="50" stroke="#009fda14" strokeWidth="0.08" />;
         })}
+
+        {/* Traffic satellite dots (render below ISS track) */}
+        {trafficEnabled && trafficDots.map((dot, i) => {
+          const p = toSVG(dot.lat, dot.lon);
+          if (!isFinite(p.x) || !isFinite(p.y)) return null;
+          const color = dot.isConjunction ? "#f87171" : (TRAFFIC_COLORS[dot.category] ?? "#94a3b8");
+          const isClose = dot.distKm < 200;
+          return (
+            <g key={`t${i}`}>
+              <circle cx={p.x} cy={p.y} r={isClose ? 0.55 : 0.35}
+                fill={color} opacity={isClose ? 0.9 : 0.55} />
+              {dot.isConjunction && (
+                <circle cx={p.x} cy={p.y} r="0.55" fill="none" stroke="#f87171" strokeWidth="0.25" opacity="0.8">
+                  <animate attributeName="r" values="0.55;1.8;0.55" dur="1.2s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.8;0;0.8" dur="1.2s" repeatCount="indefinite" />
+                </circle>
+              )}
+            </g>
+          );
+        })}
+
+        {/* ISS ground track */}
         {pastSegs.map((seg, i) => (
           <polyline key={`past${i}`} points={pts(seg)} fill="none"
             stroke="#009fda" strokeOpacity="0.22" strokeWidth="0.35"
@@ -666,7 +788,8 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
             stroke="#009fda" strokeOpacity="0.75" strokeWidth="0.45"
             strokeLinecap="round" strokeLinejoin="round" strokeDasharray="1.5 0.7" />
         ))}
-        {/* Observer location */}
+
+        {/* Observer */}
         <circle cx={obs.x} cy={obs.y} r="0.7" fill="#f59e0b" opacity="0.9" />
         <circle cx={obs.x} cy={obs.y} r="0.7" fill="none" stroke="#f59e0b" strokeWidth="0.2" opacity="0.5">
           <animate attributeName="r" values="0.7;2.2;0.7" dur="2.5s" repeatCount="indefinite" />
@@ -676,6 +799,18 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
           style={{ userSelect: "none" }}>
           {userLocation.name.length > 12 ? userLocation.name.slice(0, 11) + "…" : userLocation.name}
         </text>
+
+        {/* ISS pizza-box conjunction exclusion zone (shown when traffic enabled) */}
+        {trafficEnabled && issValid && (
+          <rect
+            x={iss.x - 1.2} y={iss.y - 0.4}
+            width="2.4" height="0.8"
+            fill="none" stroke="rgba(248,113,113,0.4)"
+            strokeWidth="0.12" strokeDasharray="0.4 0.25"
+            rx="0.05"
+          />
+        )}
+
         {/* ISS */}
         {issValid && <>
           <circle cx={iss.x} cy={iss.y} r="0.9" fill="#009fda" />
@@ -686,10 +821,60 @@ const OrbitalTracker = ({ userLocation }: { userLocation: UserLocation }) => {
           <text x={iss.x + 1.1} y={iss.y + 0.5} fontSize="1.4" fill="#009fda" fontFamily="monospace" fontWeight="bold">ISS</text>
         </>}
       </svg>
-      <div className="absolute top-2 left-2 z-10 flex items-center gap-2 bg-black/60 px-2 py-1 rounded backdrop-blur">
+
+      {/* HUD top-left: mode label + traffic toggle */}
+      <div className="absolute top-2 left-2 z-10 flex items-center gap-2 bg-black/70 px-2 py-1 rounded backdrop-blur">
         <PulseDot color="bg-primary" />
-        <span className="text-[10px] font-mono text-primary uppercase tracking-widest">Orbital Tracker · 4Hz</span>
+        <span className="text-[10px] font-mono text-primary uppercase tracking-widest">
+          Orbital Tracker · 4Hz
+        </span>
       </div>
+
+      {/* Conjunction risk banner */}
+      {trafficEnabled && hasConjunction && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-red-900/80 border border-red-500/60 px-3 py-1 rounded backdrop-blur">
+          <span className="text-[9px] font-mono text-red-300 uppercase tracking-widest font-bold">
+            ⚠ CONJUNCTION RISK
+          </span>
+          {nextTca && (
+            <span className="text-[9px] font-mono text-red-200 tabular-nums">
+              {nextTca.name.slice(0, 16)} · {nextTca.minRangeKm.toFixed(1)} km
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Proximity proximity alert (close but not conjunction-flagged) */}
+      {trafficEnabled && !hasConjunction && nearestKm !== null && nearestKm < 100 && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-amber-900/80 border border-amber-500/60 px-3 py-1 rounded backdrop-blur">
+          <span className="text-[9px] font-mono text-amber-300 uppercase tracking-widest font-bold">
+            ⚡ PROXIMITY ALERT · {nearestKm.toFixed(0)} km
+          </span>
+        </div>
+      )}
+
+      {/* Traffic legend (bottom-left when enabled) */}
+      {trafficEnabled && (
+        <div className="absolute bottom-8 left-2 z-10 flex flex-col gap-1 bg-black/70 px-2 py-1.5 rounded backdrop-blur">
+          {[
+            { cat: "starlink", label: "Starlink" },
+            { cat: "oneweb",   label: "OneWeb" },
+            { cat: "debris",   label: "Debris" },
+            { cat: "other",    label: "Other LEO" },
+          ].map(({ cat, label }) => (
+            <div key={cat} className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: TRAFFIC_COLORS[cat] }} />
+              <span className="text-[9px] font-mono text-white/70">{label}</span>
+            </div>
+          ))}
+          <div className="mt-0.5 pt-0.5 border-t border-white/10 text-[9px] font-mono text-white/40">
+            {trafficDots.length} objects tracked
+          </div>
+        </div>
+      )}
+
+      {/* Bottom-right: ISS coordinates */}
       <div className="absolute bottom-2 right-2 z-10 bg-black/60 px-2 py-1 rounded backdrop-blur text-[10px] font-mono text-primary/70 tabular-nums">
         {issPos.lat.toFixed(4)}°{issPos.lat >= 0 ? "N" : "S"}&nbsp;
         {Math.abs(issPos.lon).toFixed(4)}°{issPos.lon >= 0 ? "E" : "W"}
@@ -908,8 +1093,19 @@ const ContactPanel = () => {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [location, setLocation] = useState<UserLocation>(loadLocation);
+  const [trafficEnabled, setTrafficEnabled] = useState(false);
   const { data: summaryData } = useGetIssSummary({ query: { refetchInterval: 10_000 } });
+  const { data: trafficData, isFetching: trafficFetching } = useGetIssTraffic({
+    query: {
+      enabled: trafficEnabled,
+      staleTime: 9 * 60 * 1000,
+      refetchInterval: 10 * 60 * 1000,
+    },
+  });
   const pos = summaryData?.position;
+
+  // Conjunction risk derived at dashboard level for telemetry strip badge
+  const hasConjunctionRisk = trafficEnabled && (trafficData?.conjunctions?.length ?? 0) > 0;
 
   return (
     <div className="h-screen bg-background flex flex-col text-foreground font-sans overflow-hidden selection:bg-primary selection:text-black">
@@ -934,9 +1130,48 @@ export default function Dashboard() {
 
         {/* Center column */}
         <div className="col-span-6 flex flex-col gap-3 min-h-0 h-full">
+          {/* Traffic toggle bar */}
+          <div className="flex-shrink-0 flex items-center justify-between bg-black/40 border border-primary/10 rounded px-3 py-1">
+            <span className="text-[10px] font-mono text-primary/60 uppercase tracking-widest">Multi-Sat Traffic Overlay</span>
+            <div className="flex items-center gap-2">
+              {trafficFetching && (
+                <span className="text-[9px] font-mono text-primary/50 animate-pulse">Loading TLEs…</span>
+              )}
+              {trafficEnabled && trafficData && (
+                <span className="text-[9px] font-mono text-primary/60 tabular-nums">
+                  {trafficData.satellites.length} sats · {trafficData.conjunctions.length} conj
+                </span>
+              )}
+              {hasConjunctionRisk && (
+                <span className="text-[9px] font-mono text-red-400 font-bold uppercase tracking-wider animate-pulse">
+                  ⚠ CONJ RISK
+                </span>
+              )}
+              <button
+                onClick={() => setTrafficEnabled(v => !v)}
+                className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors border ${
+                  trafficEnabled
+                    ? "bg-primary/80 border-primary"
+                    : "bg-black/60 border-primary/30"
+                }`}
+                aria-label="Toggle traffic overlay"
+              >
+                <span
+                  className={`inline-block h-3 w-3 rounded-full transition-transform ${
+                    trafficEnabled ? "translate-x-4 bg-white" : "translate-x-0.5 bg-primary/40"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
           <div className="min-h-0 flex-1 relative rounded border border-primary/25 overflow-hidden"
             style={{ boxShadow: "0 0 30px rgba(0,159,218,0.07)" }}>
-            <OrbitalTracker userLocation={location} />
+            <OrbitalTracker
+              userLocation={location}
+              trafficEnabled={trafficEnabled}
+              trafficData={trafficData}
+            />
           </div>
           <div className="flex-shrink-0 h-[180px] rounded border border-emerald-500/20 overflow-hidden"
             style={{ boxShadow: "0 0 20px rgba(16,185,129,0.05)" }}>

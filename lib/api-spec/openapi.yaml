@@ -112,6 +112,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/IssTle"
 
+  /iss/traffic:
+    get:
+      operationId: getIssTraffic
+      tags: [iss]
+      summary: Get nearby satellite TLEs and conjunction events for orbital traffic overlay
+      responses:
+        "200":
+          description: Orbital traffic data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssTrafficResponse"
+
   /openai/conversations:
     get:
       operationId: listConversations
@@ -399,6 +412,64 @@ components:
           type: string
       required:
         - content
+
+    TrafficSatellite:
+      type: object
+      properties:
+        name:
+          type: string
+        tle1:
+          type: string
+        tle2:
+          type: string
+        category:
+          type: string
+      required:
+        - name
+        - tle1
+        - tle2
+        - category
+
+    ConjunctionEvent:
+      type: object
+      properties:
+        name:
+          type: string
+        tca:
+          type: string
+        minRangeKm:
+          type: number
+        relVelKmS:
+          type: number
+        tle1:
+          type: string
+        tle2:
+          type: string
+      required:
+        - name
+        - tca
+        - minRangeKm
+        - relVelKmS
+        - tle1
+        - tle2
+
+    IssTrafficResponse:
+      type: object
+      properties:
+        satellites:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrafficSatellite"
+        conjunctions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConjunctionEvent"
+        fetchedAt:
+          type: number
+      required:
+        - satellites
+        - conjunctions
+        - fetchedAt
 
     ErrorResponse:
       type: object

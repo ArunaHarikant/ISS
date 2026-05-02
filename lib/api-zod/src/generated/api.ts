@@ -107,6 +107,31 @@ export const GetIssTleResponse = zod.object({
 });
 
 /**
+ * @summary Get nearby satellite TLEs and conjunction events for orbital traffic overlay
+ */
+export const GetIssTrafficResponse = zod.object({
+  satellites: zod.array(
+    zod.object({
+      name: zod.string(),
+      tle1: zod.string(),
+      tle2: zod.string(),
+      category: zod.string(),
+    }),
+  ),
+  conjunctions: zod.array(
+    zod.object({
+      name: zod.string(),
+      tca: zod.string(),
+      minRangeKm: zod.number(),
+      relVelKmS: zod.number(),
+      tle1: zod.string(),
+      tle2: zod.string(),
+    }),
+  ),
+  fetchedAt: zod.number(),
+});
+
+/**
  * @summary List all AI mentor conversations
  */
 export const ListConversationsResponseItem = zod.object({

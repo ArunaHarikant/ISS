@@ -28,6 +28,7 @@ import type {
   IssPosition,
   IssSummary,
   IssTle,
+  IssTrafficResponse,
   SendMessageBody,
 } from "./api.schemas";
 
@@ -491,6 +492,81 @@ export function useGetIssTle<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetIssTleQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get nearby satellite TLEs and conjunction events for orbital traffic overlay
+ */
+export const getGetIssTrafficUrl = () => {
+  return `/api/iss/traffic`;
+};
+
+export const getIssTraffic = async (
+  options?: RequestInit,
+): Promise<IssTrafficResponse> => {
+  return customFetch<IssTrafficResponse>(getGetIssTrafficUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetIssTrafficQueryKey = () => {
+  return [`/api/iss/traffic`] as const;
+};
+
+export const getGetIssTrafficQueryOptions = <
+  TData = Awaited<ReturnType<typeof getIssTraffic>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getIssTraffic>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetIssTrafficQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getIssTraffic>>> = ({
+    signal,
+  }) => getIssTraffic({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getIssTraffic>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetIssTrafficQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getIssTraffic>>
+>;
+export type GetIssTrafficQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get nearby satellite TLEs and conjunction events for orbital traffic overlay
+ */
+
+export function useGetIssTraffic<
+  TData = Awaited<ReturnType<typeof getIssTraffic>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getIssTraffic>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIssTrafficQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

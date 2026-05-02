@@ -91,6 +91,28 @@ export interface SendMessageBody {
   content: string;
 }
 
+export interface TrafficSatellite {
+  name: string;
+  tle1: string;
+  tle2: string;
+  category: string;
+}
+
+export interface ConjunctionEvent {
+  name: string;
+  tca: string;
+  minRangeKm: number;
+  relVelKmS: number;
+  tle1: string;
+  tle2: string;
+}
+
+export interface IssTrafficResponse {
+  satellites: TrafficSatellite[];
+  conjunctions: ConjunctionEvent[];
+  fetchedAt: number;
+}
+
 export interface ErrorResponse {
   error: string;
 }
