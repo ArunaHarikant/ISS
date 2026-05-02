@@ -106,7 +106,7 @@ const PassCountdown = () => {
   return (
     <Card className="p-4 border-accent/30 shadow-[0_0_20px_rgba(255,170,0,0.05)] bg-card flex flex-col gap-4">
       <h2 className="text-lg font-bold text-accent/80 uppercase tracking-widest border-b border-accent/20 pb-2">
-        Next ISU Overhead Pass
+        Next International Space University (ISU) Overhead Pass
       </h2>
       <div className="flex flex-col items-center py-4">
         <span className="text-4xl font-mono text-accent drop-shadow-[0_0_10px_rgba(255,170,0,0.8)]">
@@ -217,7 +217,7 @@ const CommanderPanel = () => {
                 </span>
                 {member.isuConnection && (
                   <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    ISU ★
+                    Int'l Space University ★
                   </span>
                 )}
               </div>
@@ -449,7 +449,7 @@ const SubOrbitalView = ({ lat, lon }: { lat: number | null; lon: number | null }
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
         </span>
-        <span className="text-xs font-mono text-white uppercase tracking-widest">NADIR VIEW · ISS GROUND TRACK</span>
+        <span className="text-xs font-mono text-white uppercase tracking-widest">NADIR VIEW · INT'L SPACE STATION (ISS) GROUND TRACK</span>
       </div>
 
       {/* Targeting reticle */}
