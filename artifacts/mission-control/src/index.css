@@ -26,20 +26,20 @@
 }
 
 :root, .dark {
-  --background: 240 20% 5%; /* #0a0a0f */
+  --background: 222 47% 4%; /* #060a12 deep space navy */
   --foreground: 0 0% 100%;
-  --border: 191 100% 50% / 0.2; /* #00e5ff glowing border */
-  --card: 240 20% 7%;
+  --border: 199 100% 43% / 0.2; /* ESA blue border */
+  --card: 222 47% 6%; /* #0b1120 */
   --card-foreground: 0 0% 100%;
-  --card-border: 191 100% 50% / 0.3;
-  --primary: 191 100% 50%; /* #00e5ff */
-  --primary-foreground: 240 20% 5%;
-  --muted: 240 10% 15%;
-  --muted-foreground: 240 5% 65%;
-  --accent: 43 100% 50%; /* amber */
-  --accent-foreground: 240 20% 5%;
-  --input: 191 100% 50% / 0.3;
-  --ring: 191 100% 50%;
+  --card-border: 199 100% 43% / 0.25;
+  --primary: 199 100% 43%; /* #009fda ESA blue */
+  --primary-foreground: 222 47% 4%;
+  --muted: 222 30% 14%;
+  --muted-foreground: 220 15% 60%;
+  --accent: 38 92% 50%; /* #f59e0b amber */
+  --accent-foreground: 222 47% 4%;
+  --input: 199 100% 43% / 0.25;
+  --ring: 199 100% 43%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-mono: 'IBM Plex Mono', monospace;
