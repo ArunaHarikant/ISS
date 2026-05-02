@@ -3,20 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ISU Mission Control API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: iss
+    description: ISS telemetry and tracking
+  - name: openai
+    description: AI Mentor chat
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +27,141 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /iss/position:
+    get:
+      operationId: getIssPosition
+      tags: [iss]
+      summary: Get current ISS position, altitude, and velocity
+      responses:
+        "200":
+          description: ISS telemetry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssPosition"
+
+  /iss/passes:
+    get:
+      operationId: getIssPasses
+      tags: [iss]
+      summary: Get upcoming ISS passes over ISU campus in Strasbourg
+      responses:
+        "200":
+          description: Upcoming passes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssPassesResponse"
+
+  /iss/crew:
+    get:
+      operationId: getIssCrew
+      tags: [iss]
+      summary: Get current ISS crew members
+      responses:
+        "200":
+          description: ISS crew
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssCrewResponse"
+
+  /iss/summary:
+    get:
+      operationId: getIssSummary
+      tags: [iss]
+      summary: Get aggregated ISS telemetry snapshot for dashboard
+      responses:
+        "200":
+          description: ISS summary data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssSummary"
+
+  /openai/conversations:
+    get:
+      operationId: listConversations
+      tags: [openai]
+      summary: List all AI mentor conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+    post:
+      operationId: createConversation
+      tags: [openai]
+      summary: Create a new AI mentor conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationBody"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /openai/conversations/{id}:
+    get:
+      operationId: getConversation
+      tags: [openai]
+      summary: Get a conversation with its messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /openai/conversations/{id}/messages:
+    post:
+      operationId: sendMessage
+      tags: [openai]
+      summary: Send a message to AI mentor (SSE streaming)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "200":
+          description: Streamed AI response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +172,189 @@ components:
       required:
         - status
 
+    IssPosition:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        altitude:
+          type: number
+        velocity:
+          type: number
+        timestamp:
+          type: integer
+        visibility:
+          type: string
+      required:
+        - latitude
+        - longitude
+        - altitude
+        - velocity
+        - timestamp
+        - visibility
+
+    IssPass:
+      type: object
+      properties:
+        risetime:
+          type: integer
+        duration:
+          type: integer
+        maxElevation:
+          type: number
+      required:
+        - risetime
+        - duration
+        - maxElevation
+
+    IssPassesResponse:
+      type: object
+      properties:
+        passes:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssPass"
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+            name:
+              type: string
+          required:
+            - latitude
+            - longitude
+            - name
+      required:
+        - passes
+        - location
+
+    CrewMember:
+      type: object
+      properties:
+        name:
+          type: string
+        craft:
+          type: string
+      required:
+        - name
+        - craft
+
+    IssCrewResponse:
+      type: object
+      properties:
+        people:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrewMember"
+        number:
+          type: integer
+      required:
+        - people
+        - number
+
+    IssSummary:
+      type: object
+      properties:
+        position:
+          $ref: "#/components/schemas/IssPosition"
+        nextPass:
+          $ref: "#/components/schemas/IssPass"
+        crewCount:
+          type: integer
+        missionDay:
+          type: integer
+        orbitsCompleted:
+          type: integer
+      required:
+        - position
+        - crewCount
+        - missionDay
+        - orbitsCompleted
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - createdAt
+        - updatedAt
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    ConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+      required:
+        - id
+        - title
+        - createdAt
+        - updatedAt
+        - messages
+
+    CreateConversationBody:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

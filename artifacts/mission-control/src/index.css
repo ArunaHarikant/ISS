@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+}
+
+:root, .dark {
+  --background: 240 20% 5%; /* #0a0a0f */
+  --foreground: 0 0% 100%;
+  --border: 191 100% 50% / 0.2; /* #00e5ff glowing border */
+  --card: 240 20% 7%;
+  --card-foreground: 0 0% 100%;
+  --card-border: 191 100% 50% / 0.3;
+  --primary: 191 100% 50%; /* #00e5ff */
+  --primary-foreground: 240 20% 5%;
+  --muted: 240 10% 15%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 43 100% 50%; /* amber */
+  --accent-foreground: 240 20% 5%;
+  --input: 191 100% 50% / 0.3;
+  --ring: 191 100% 50%;
+
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-mono: 'IBM Plex Mono', monospace;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
