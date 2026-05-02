@@ -398,6 +398,178 @@ const LocationPanel = ({
   );
 };
 
+// ─── ARISS Ham Radio / Link Budget Panel ─────────────────────────────────────
+const ARISS_FREQ_MHZ = 145.800;
+const C_M_S = 299_792_458;
+
+interface LinkData {
+  elevationDeg: number;
+  azimuthDeg: number;
+  rangeKm: number;
+  dopplerHz: number;
+  fsplDb: number;
+}
+
+const HamRadioPanel = ({ userLocation }: { userLocation: UserLocation }) => {
+  const { data: tleData } = useGetIssTle({
+    query: { refetchInterval: 3_600_000, staleTime: 3_600_000 },
+  });
+  const [link, setLink] = useState<LinkData | null>(null);
+  const satrecRef = useRef<satelliteJs.SatRec | null>(null);
+
+  useEffect(() => {
+    if (!tleData) return;
+    satrecRef.current = satelliteJs.twoline2satrec(tleData.tle1, tleData.tle2);
+  }, [tleData]);
+
+  useEffect(() => {
+    const observerGd = {
+      longitude: satelliteJs.degreesToRadians(userLocation.lon),
+      latitude: satelliteJs.degreesToRadians(userLocation.lat),
+      height: 0.12,
+    };
+
+    const compute = () => {
+      const rec = satrecRef.current;
+      if (!rec) return;
+
+      const t1 = new Date();
+      const t2 = new Date(t1.getTime() + 1000);
+
+      const pv1 = satelliteJs.propagate(rec, t1);
+      const pv2 = satelliteJs.propagate(rec, t2);
+      if (!pv1.position || typeof pv1.position === "boolean") return;
+      if (!pv2.position || typeof pv2.position === "boolean") return;
+
+      const gmst1 = satelliteJs.gstime(t1);
+      const gmst2 = satelliteJs.gstime(t2);
+
+      const ecf1 = satelliteJs.eciToEcf(pv1.position, gmst1);
+      const ecf2 = satelliteJs.eciToEcf(pv2.position, gmst2);
+
+      const look1 = satelliteJs.ecfToLookAngles(observerGd, ecf1);
+      const look2 = satelliteJs.ecfToLookAngles(observerGd, ecf2);
+
+      const rangeKm = look1.rangeSat;
+      const rangeRateKmS = look2.rangeSat - look1.rangeSat; // km/s (positive = receding)
+
+      // Doppler: Δf = −f₀ × v_r / c  (receding → lower frequency)
+      const dopplerHz = -(ARISS_FREQ_MHZ * 1e6) * (rangeRateKmS * 1000) / C_M_S;
+
+      // Free-space path loss: FSPL(dB) = 20log10(d_m) + 20log10(f_Hz) − 147.55
+      const fsplDb =
+        20 * Math.log10(rangeKm * 1000) +
+        20 * Math.log10(ARISS_FREQ_MHZ * 1e6) -
+        147.55;
+
+      setLink({
+        elevationDeg: satelliteJs.radiansToDegrees(look1.elevation),
+        azimuthDeg: satelliteJs.radiansToDegrees(look1.azimuth),
+        rangeKm,
+        dopplerHz,
+        fsplDb,
+      });
+    };
+
+    compute();
+    const id = setInterval(compute, 250);
+    return () => clearInterval(id);
+  }, [tleData, userLocation]);
+
+  const aboveHorizon = link && link.elevationDeg > 0;
+  const linkState = !link
+    ? "NO TLE"
+    : link.elevationDeg < 0
+    ? "BELOW HORIZON"
+    : link.elevationDeg < 5
+    ? "LOW AOS"
+    : link.elevationDeg < 20
+    ? "MARGINAL"
+    : "OPTIMAL";
+
+  const stateColor = !link
+    ? "text-muted-foreground"
+    : link.elevationDeg < 0
+    ? "text-red-400"
+    : link.elevationDeg < 5
+    ? "text-amber-400"
+    : link.elevationDeg < 20
+    ? "text-yellow-300"
+    : "text-emerald-400";
+
+  const adjustedMhz = link
+    ? ARISS_FREQ_MHZ + link.dopplerHz / 1e6
+    : ARISS_FREQ_MHZ;
+
+  const dopplerKhz = link ? link.dopplerHz / 1000 : 0;
+
+  // Doppler bar: ±5 kHz range mapped to −100%…+100%
+  const dopplerBarPct = Math.max(-100, Math.min(100, (dopplerKhz / 5) * 100));
+
+  const row = (label: string, value: string, accent?: boolean) => (
+    <div className="flex items-center justify-between px-3 py-1.5 border-b border-primary/8 last:border-0">
+      <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest flex-shrink-0">{label}</span>
+      <span className={`text-[11px] font-mono tabular-nums ${accent ? stateColor : "text-white"}`}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div
+      className="rounded border border-primary/20 bg-card flex flex-col overflow-hidden"
+      style={{ boxShadow: "0 0 20px rgba(0,159,218,0.06)" }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-primary/15 bg-primary/5">
+        <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-primary/80">
+          ARISS · 145.800 MHz
+        </span>
+        <span className={`text-[9px] font-mono uppercase tracking-wider ${stateColor}`}>{linkState}</span>
+      </div>
+
+      {/* Data rows */}
+      {row("Elevation", link ? `${link.elevationDeg.toFixed(1)}°` : "---", true)}
+      {row("Azimuth",   link ? `${link.azimuthDeg.toFixed(1)}°`   : "---")}
+      {row("Range",     link ? `${link.rangeKm.toFixed(0)} km`     : "--- km")}
+      {row("FSPL",      link ? `${link.fsplDb.toFixed(1)} dB`      : "--- dB")}
+
+      {/* Doppler shift section */}
+      <div className="px-3 pt-2 pb-2.5 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">Doppler Shift</span>
+          <span className={`text-[11px] font-mono tabular-nums ${dopplerKhz > 0 ? "text-emerald-400" : dopplerKhz < 0 ? "text-rose-400" : "text-white"}`}>
+            {dopplerKhz >= 0 ? "+" : ""}{dopplerKhz.toFixed(2)} kHz
+          </span>
+        </div>
+        {/* Shift bar */}
+        <div className="relative h-2 w-full bg-black/50 rounded-full overflow-hidden">
+          <div className="absolute inset-y-0 left-1/2 w-px bg-primary/30" />
+          <div
+            className={`absolute top-0 h-full rounded-full transition-all duration-100 ${
+              dopplerKhz >= 0 ? "bg-emerald-400/70" : "bg-rose-400/70"
+            }`}
+            style={{
+              left:  dopplerBarPct >= 0 ? "50%"                  : `${50 + dopplerBarPct}%`,
+              width: `${Math.abs(dopplerBarPct) / 2}%`,
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-mono text-muted-foreground/50">−5 kHz</span>
+          <span className="text-[10px] font-mono text-primary/60 tabular-nums">
+            {adjustedMhz.toFixed(4)} MHz
+          </span>
+          <span className="text-[9px] font-mono text-muted-foreground/50">+5 kHz</span>
+        </div>
+        <p className="text-[9px] font-mono text-muted-foreground/50 leading-tight mt-0.5">
+          {aboveHorizon
+            ? "Tune your radio to the adjusted frequency above to receive the ARISS downlink."
+            : "ISS below horizon — monitor for AOS, then tune to adjusted frequency."}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // ─── Orbital Tracker (4 Hz, satellite.js) ────────────────────────────────────
 interface GeoPoint { lat: number; lon: number; future: boolean }
 
@@ -757,6 +929,7 @@ export default function Dashboard() {
           <CrewStatusPanel />
           <MissionTimeline location={location} />
           <LocationPanel location={location} onChange={setLocation} />
+          <HamRadioPanel userLocation={location} />
         </div>
 
         {/* Center column */}
