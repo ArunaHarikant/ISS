@@ -215,11 +215,6 @@ const CommanderPanel = () => {
                 <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/5 ${member.badgeColor}`}>
                   {member.agency}
                 </span>
-                {member.isuConnection && (
-                  <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    Int'l Space University ★
-                  </span>
-                )}
               </div>
               <p className="text-xs text-primary/70 font-mono mt-0.5">{member.role}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">{member.detail}</p>
