@@ -127,17 +127,27 @@ const PassCountdown = () => {
   );
 };
 
-// ─── Crew-12 roster (hardcoded) ───────────────────────────────────────────────
+// ─── Crew-12 roster — launched 13 Feb 2026 ────────────────────────────────────
 const CREW_12 = [
+  {
+    initials: "JM",
+    name: "Jessica Meir",
+    agency: "NASA",
+    role: "Mission Commander",
+    detail: "Launched 13 Feb 2026 · Exp. 74/75",
+    isuConnection: false,
+    color: "text-primary border-primary bg-primary/20",
+    badgeColor: "text-primary",
+  },
   {
     initials: "JH",
     name: "Jack Hathaway",
     agency: "NASA",
-    role: "Mission Commander / Pilot",
+    role: "Mission Pilot",
     detail: "First spaceflight",
     isuConnection: false,
-    color: "text-primary border-primary bg-primary/20",
-    badgeColor: "text-primary",
+    color: "text-sky-400 border-sky-400 bg-sky-400/10",
+    badgeColor: "text-sky-400",
   },
   {
     initials: "SA",
