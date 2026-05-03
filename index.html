@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISS Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-title">
+            <h1>ISS Dashboard</h1>
+            <p>Track the Station in Real-Time</p>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <section class="panel map-panel">
+            <h2>Live Position</h2>
+            <div id="map" style="height: 400px; width: 100%; border-radius: 8px;"></div>
+        </section>
+
+        <div class="side-panels">
+            <section class="panel data-panel">
+                <h2>Orbital Parameters</h2>
+                <div class="data-grid">
+                    <div class="data-item">
+                        <span class="label">Altitude</span>
+                        <span id="altitude" class="value">-- km</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">Velocity</span>
+                        <span id="velocity" class="value">-- km/h</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="label">Visibility</span>
+                        <span id="visibility" class="value">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel crew-panel">
+                <h2>Current Crew</h2>
+                <div class="crew-list-container">
+                    <ul id="crew-list" class="crew-list">
+                        <li>Loading crew...</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="script.js"></script>
+</body>
+</html>
