@@ -176,7 +176,7 @@ const CREW_12 = [
 // ─── Crew Status Panel ────────────────────────────────────────────────────────
 const CrewStatusPanel = () => (
   <div
-    className="rounded border border-primary/20 bg-card flex flex-col overflow-hidden"
+    className="rounded border border-primary/20 bg-card flex flex-col flex-shrink-0"
     style={{ boxShadow: "0 0 20px rgba(0,159,218,0.06)" }}
   >
     <div className="flex items-center justify-between px-3 py-2 border-b border-primary/15 bg-primary/5">
@@ -187,11 +187,11 @@ const CrewStatusPanel = () => (
       {CREW_12.map((m) => (
         <div
           key={m.name}
-          className="flex items-center gap-3 px-3 py-2.5 border-b border-primary/8 last:border-0"
+          className="flex items-center gap-3 px-3 py-1.5 border-b border-primary/8 last:border-0"
           style={m.highlight ? { background: "rgba(0,159,218,0.07)", borderLeft: `2px solid ${m.color}` } : { borderLeft: "2px solid transparent" }}
         >
           <div
-            className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold border"
+            className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold border"
             style={{ color: m.color, borderColor: `${m.color}50`, background: `${m.color}15` }}
           >
             {m.initials}
