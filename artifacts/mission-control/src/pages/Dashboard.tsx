@@ -242,7 +242,7 @@ const MissionTimeline = ({ location }: { location: UserLocation }) => {
 
   return (
     <div
-      className="rounded border border-primary/20 bg-card flex flex-col overflow-hidden"
+      className="rounded border border-primary/20 bg-card flex flex-col flex-shrink-0 overflow-hidden"
       style={{ boxShadow: "0 0 20px rgba(0,159,218,0.06)" }}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-primary/15 bg-primary/5">
@@ -342,7 +342,7 @@ const LocationPanel = ({
 
   return (
     <div
-      className="rounded border border-primary/20 bg-card flex flex-col overflow-hidden"
+      className="rounded border border-primary/20 bg-card flex flex-col flex-shrink-0 overflow-hidden"
       style={{ boxShadow: "0 0 20px rgba(0,159,218,0.06)" }}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-primary/15 bg-primary/5">
@@ -517,7 +517,7 @@ const HamRadioPanel = ({ userLocation }: { userLocation: UserLocation }) => {
 
   return (
     <div
-      className="rounded border border-primary/20 bg-card flex flex-col overflow-hidden"
+      className="rounded border border-primary/20 bg-card flex flex-col flex-shrink-0 overflow-hidden"
       style={{ boxShadow: "0 0 20px rgba(0,159,218,0.06)" }}
     >
       {/* Header */}
